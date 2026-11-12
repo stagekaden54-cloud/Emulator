@@ -198,6 +198,13 @@ private fun RetroPlayerApp(
         }
     }
 
+    val playerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        refresh()
+        status = "Library updated."
+    }
+
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri ->
@@ -462,7 +469,7 @@ private fun RetroPlayerApp(
                                 putExtra(PlayerActivity.EXTRA_GAME_ID, game.id)
                                 putExtra(PlayerActivity.EXTRA_BIOS_PATH, repository.biosPath().orEmpty())
                             }
-                            context.startActivity(intent)
+                            playerLauncher.launch(intent)
                         }
                     }) { Text("▶ Play") }
                     TextButton(onClick = {

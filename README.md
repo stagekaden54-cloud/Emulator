@@ -1,12 +1,12 @@
 # Retro Player Android
 
-A native Android companion app for Retro Player, built with Kotlin and Jetpack Compose. The app targets Android phones and tablets; Android TV is intentionally out of scope for this first version.
+A native Android companion app for Retro Player, built with Kotlin and Jetpack Compose. This first version targets Android phones and tablets. Android TV is intentionally out of scope.
 
-## Included systems
+## Supported systems
 
-The EmulatorJS runtime is configured for these system IDs:
+The player is configured for these EmulatorJS core IDs:
 
-| System | EmulatorJS core ID |
+| System | Core ID |
 |---|---|
 | PlayStation 1 | `psx` |
 | NES | `nes` |
@@ -18,52 +18,47 @@ The EmulatorJS runtime is configured for these system IDs:
 | Sega Master System | `segaMS` |
 | Sega Game Gear | `segaGG` |
 
-The runtime is loaded inside a restricted Android WebView from the pinned EmulatorJS 4.2.3 CDN path. The ROM itself is loaded from Retro Player's private app storage through AndroidX WebViewAssetLoader. The app does not enable broad file-scheme access or universal file access from file URLs.
+## Included features
 
-## Features in this first implementation
-
-- Native Compose library with search, console filters, favorites, recently played, playtime, and title/recent sort.
-- Local game import through Android's Storage Access Framework. The game files are copied to app-private storage; they are not uploaded to Supabase.
+- Native Jetpack Compose library with search, console filters, favorites, recently played, playtime, and sorting.
+- Local game import using Android's Storage Access Framework. ROM files are copied to app-private storage and are not uploaded to Supabase.
 - Ambiguous `.bin` imports prompt for PlayStation 1 or Sega Genesis.
-- A dedicated EmulatorJS player screen with the system-specific core ID, mobile browser mode, touchscreen haptics, and optional user-provided PS1 BIOS.
-- Account sign-in, sign-up, password reset, and sign-out using the same Supabase project and publishable key as the Retro Player website.
-- Session tokens are encrypted with Android Keystore AES-GCM.
-- Cloud library metadata sync through the existing `public.account_sync` table, plus recent-played records through `public.recent_games`. Row Level Security remains enabled; the app only sends the signed-in user's JWT.
-- Android-specific save backup import/export and cloud backup. Backups are limited to 5 MB each.
-- Optional six-hour background sync through WorkManager.
-- Settings for dark theme, default volume, haptics, PS1 BIOS, and device diagnostics.
-- CI workflow to assemble a debug APK and publish it as a GitHub Actions artifact.
+- EmulatorJS player inside a restricted Android WebView, with mobile mode, hardware acceleration, volume, touch haptics, and optional user-provided PS1 BIOS.
+- Existing Retro Player account sign-in, sign-up, password recovery, and sign-out using Supabase.
+- Session tokens encrypted with Android Keystore AES-GCM.
+- Cloud library metadata and recent-played sync using the existing Supabase tables and Row Level Security.
+- Import/export of emulator save and memory-card backup files, with optional account cloud backup.
+- Optional periodic background sync using WorkManager.
+- Settings for theme, volume, haptics, automatic sync, PS1 BIOS, and diagnostics.
+- GitHub Actions workflow to assemble a debug APK and upload it as an artifact.
 
-## Important limitations to verify
+## Important limitations
 
-This is an initial native app implementation, not a validated release build yet.
-
-1. **No real-device benchmarks have been run.** EmulatorJS compatibility does not guarantee full-speed emulation on every Android phone. Test every core and game on the target device.
-2. **Bluetooth controller input depends on the Android WebView Gamepad API and the controller.** It needs physical testing and button-mapping verification.
-3. **EmulatorJS's own in-player save states use its browser storage/menu.** The app's cloud backup feature currently handles user-imported save and memory-card files separately. It does not claim that the website and Android can exchange live save-state files yet.
-4. **The runtime is fetched from the pinned EmulatorJS CDN release.** The first emulator launch needs network access; library browsing and imported-file management are local. Offline emulator startup is not guaranteed until runtime caching is tested.
-5. **Multi-file PlayStation CUE/BIN sets should be selected together** so the CUE file and its referenced track files are copied into the same import folder.
-6. **BIOS files are not included.** Import only firmware files you are legally entitled to use.
-7. **The Android APK has not been built or installed on a physical device by this repository change.** The included GitHub Actions workflow is intended to run the first build.
+1. No Android device benchmarks have been run. EmulatorJS support does not guarantee full-speed emulation on every device; test all nine systems on real hardware.
+2. Bluetooth controller support depends on Android WebView's Gamepad API and the connected controller. Button mapping and latency still need physical testing.
+3. The save-backup screen handles files imported or exported by an emulator. It is separate from EmulatorJS's live in-player browser save storage; automatic capture of live EmulatorJS saves is not yet verified or claimed.
+4. The EmulatorJS 4.2.3 runtime is downloaded from its pinned CDN path. The first player launch requires internet access; offline emulator startup is not yet guaranteed.
+5. For multi-file PlayStation CUE/BIN images, select the CUE and all referenced track files together.
+6. BIOS files are not included. Import only firmware files you are legally entitled to use.
+7. Cloud backup data is protected by HTTPS, account authentication, and database Row Level Security, but is not client-side end-to-end encrypted.
+8. The project has not yet been validated on a physical Android device. The CI workflow must pass before the debug APK can be considered build-verified.
 
 ## Build
 
-Open the project in Android Studio with JDK 17 and Android SDK Platform 36 installed, or use Gradle 8.13 from a local terminal:
+Open the project in Android Studio with JDK 17 and Android SDK Platform 36 installed, or use Gradle 8.13:
 
 ```bash
 gradle --no-daemon :app:assembleDebug
 ```
 
-The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
-
-The GitHub Actions workflow uploads the APK as an artifact when CI succeeds.
+The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`. GitHub Actions uploads it as the `retro-player-android-debug` artifact after a successful build.
 
 ## Supabase configuration
 
-The app uses the public publishable key already present in the Retro Player website. It is a client-side key, not a service-role key. Do not add a Supabase service-role or secret key to this app.
+The app uses the existing Supabase project URL and public publishable client key. The publishable key is designed for client-side use; never add a service-role key or other secret to the Android app.
 
-The app does not create, alter, or disable any database tables, policies, or functions. It uses the existing RLS-protected account tables. See the Supabase project configuration in `app/build.gradle.kts`.
+The app does not create, alter, or disable Supabase tables, policies, or functions. It uses the existing RLS-protected account tables.
 
-## Legal files
+## Legal
 
-Retro Player does not bundle games or BIOS files. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for EmulatorJS and dependency notices.
+Retro Player does not bundle games or BIOS files. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party notices.

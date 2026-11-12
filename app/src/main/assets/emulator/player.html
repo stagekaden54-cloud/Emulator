@@ -13,6 +13,7 @@
     #status {
       position: fixed; inset: 0; display: grid; place-items: center; padding: 24px;
       color: #e9f1fb; text-align: center; background: #080d15; z-index: 1;
+      pointer-events: none;
     }
     #status small { display: block; color: #9caec4; margin-top: 8px; line-height: 1.5; }
     #game { position: relative; }
@@ -36,6 +37,7 @@
         status.textContent = "Unable to start this game. Return to your library and try importing it again.";
         return;
       }
+
       window.EJS_player = "#game";
       window.EJS_core = core;
       window.EJS_gameUrl = gameUrl;
@@ -44,9 +46,11 @@
       window.EJS_startOnLoaded = true;
       window.EJS_browserMode = "mobile";
       window.EJS_volume = Math.max(0, Math.min(1, Number(params.get("volume") || "1")));
-      window.EJS_cacheConfig = { enabled: true, cacheMaxSizeMB: 512, cacheMaxAgeMins: 7200 };
       window.EJS_color = "#67b7ff";
       window.EJS_defaultOptions = { "save-state-location": "browser" };
+      window.EJS_ready = function () {
+        if (status && status.parentNode) status.remove();
+      };
       if (core === "psx" && biosUrl) window.EJS_biosUrl = biosUrl;
 
       if (haptics && navigator.vibrate) {
@@ -57,14 +61,9 @@
         }, true);
       }
 
-      window.addEventListener("load", function () {
-        window.setTimeout(function () {
-          if (status && status.parentNode) status.remove();
-        }, 1200);
-      });
       window.addEventListener("error", function (event) {
         if (!status || !status.parentNode) return;
-        status.innerHTML = "The emulator could not finish loading.<small>Check your internet connection and the game file, then try again. " +
+        status.innerHTML = "The emulator reported an error.<small>Check your internet connection and game file, then try again. " +
           String(event.message || "").replace(/[<>&]/g, "") + "</small>";
       });
       const loader = document.createElement("script");

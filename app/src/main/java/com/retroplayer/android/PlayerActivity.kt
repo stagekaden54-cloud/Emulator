@@ -32,14 +32,22 @@ class PlayerActivity : ComponentActivity() {
         val systemId = intent.getStringExtra(EXTRA_SYSTEM_ID).orEmpty()
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         gameId = intent.getStringExtra(EXTRA_GAME_ID).orEmpty()
-        if (!File(gamePath).isFile || systemId.isBlank()) {
+        val romFile = File(gamePath)
+        if (!romFile.isFile || systemId.isBlank()) {
             Toast.makeText(this, "This game file is not available on this device.", Toast.LENGTH_LONG).show()
             finish()
             return
         }
 
-        val romRoot = File(filesDir, "roms")
-        val biosPath = intent.getStringExtra(EXTRA_BIOS_PATH).orEmpty()
+        val romRoot = File(filesDir, "roms").canonicalFile
+        val relativeRom = runCatching { romFile.canonicalFile.relativeTo(romRoot).invariantSeparatorsPath }.getOrNull()
+        if (relativeRom == null || relativeRom.startsWith("..")) {
+            Toast.makeText(this, "The imported game is outside Retro Player storage.", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
+        val appOrigin = "https://" + WebViewAssetLoader.DEFAULT_DOMAIN
         val assetLoader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
             .addPathHandler("/roms/", SafeFilePathHandler(romRoot))
@@ -48,6 +56,7 @@ class PlayerActivity : ComponentActivity() {
 
         val web = WebView(this)
         webView = web
+        web.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         web.setBackgroundColor(android.graphics.Color.BLACK)
         web.settings.apply {
             javaScriptEnabled = true
@@ -60,18 +69,20 @@ class PlayerActivity : ComponentActivity() {
             mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
             mediaPlaybackRequiresUserGesture = false
             cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
+            safeBrowsingEnabled = true
             supportZoom = false
         }
         web.webChromeClient = WebChromeClient()
         web.webViewClient = object : WebViewClient() {
-            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                return assetLoader.shouldInterceptRequest(request.url)
-            }
+            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
+                assetLoader.shouldInterceptRequest(request.url)
 
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val uri = request.url
-                val trusted = uri.host == WebViewAssetLoader.DEFAULT_DOMAIN ||
-                    uri.host == "cdn.emulatorjs.org"
+                val trusted = uri.scheme == "https" && (
+                    uri.host == WebViewAssetLoader.DEFAULT_DOMAIN ||
+                        uri.host == "cdn.emulatorjs.org"
+                    )
                 return !trusted
             }
 
@@ -103,26 +114,23 @@ class PlayerActivity : ComponentActivity() {
         }
         setContentView(root)
 
-        val relativeRom = runCatching { File(gamePath).relativeTo(romRoot).invariantSeparatorsPath }.getOrNull()
-        if (relativeRom == null || relativeRom.startsWith("..")) {
-            Toast.makeText(this, "The imported game is outside Retro Player storage.", Toast.LENGTH_LONG).show()
-            finish()
-            return
-        }
-        val romUrl = "https://" + WebViewAssetLoader.DEFAULT_DOMAIN + "/roms/" +
+        val romUrl = appOrigin + "/roms/" +
             relativeRom.split("/").joinToString("/") { Uri.encode(it) }
-        val biosUrl = if (biosPath.isNotBlank() && File(biosPath).isFile) {
-            val biosRoot = File(filesDir, "bios")
-            val relativeBios = runCatching { File(biosPath).relativeTo(biosRoot).invariantSeparatorsPath }.getOrNull()
-            if (relativeBios != null && !relativeBios.startsWith("..")) {
-                "https://" + WebViewAssetLoader.DEFAULT_DOMAIN + "/bios/" +
+        val biosPath = intent.getStringExtra(EXTRA_BIOS_PATH).orEmpty()
+        val biosRoot = File(filesDir, "bios").canonicalFile
+        val biosUrl = if (biosPath.isNotBlank()) {
+            val relativeBios = runCatching {
+                File(biosPath).canonicalFile.relativeTo(biosRoot).invariantSeparatorsPath
+            }.getOrNull()
+            if (relativeBios != null && !relativeBios.startsWith("..") && File(biosPath).isFile) {
+                appOrigin + "/bios/" +
                     relativeBios.split("/").joinToString("/") { Uri.encode(it) }
             } else ""
         } else ""
+
         val preferences = SettingsRepository(this)
-        val playerUri = Uri.parse(
-            "https://" + WebViewAssetLoader.DEFAULT_DOMAIN + "/assets/emulator/player.html"
-        ).buildUpon()
+        val playerUri = Uri.parse(appOrigin + "/assets/emulator/player.html")
+            .buildUpon()
             .appendQueryParameter("game", romUrl)
             .appendQueryParameter("system", systemId)
             .appendQueryParameter("title", title)

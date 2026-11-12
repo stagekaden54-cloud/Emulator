@@ -5,6 +5,7 @@
 
     <application
         android:allowBackup="false"
+        android:hardwareAccelerated="true"
         android:label="Retro Player"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false"
