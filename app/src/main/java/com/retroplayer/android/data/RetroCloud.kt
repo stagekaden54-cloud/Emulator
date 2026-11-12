@@ -2,6 +2,7 @@ package com.retroplayer.android.data
 
 import android.content.Context
 import android.util.Base64
+import com.retroplayer.android.BuildConfig
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.MediaType.Companion.toMediaType

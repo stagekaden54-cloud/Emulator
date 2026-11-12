@@ -79,7 +79,7 @@ class GameDatabase(context: Context) : SQLiteOpenHelper(context, "retro-player.d
     fun recordPlayed(id: String) {
         writableDatabase.execSQL(
             "UPDATE games SET play_count=play_count+1, last_played_at=?, updated_at=? WHERE id=?",
-            arrayOf(System.currentTimeMillis(), System.currentTimeMillis(), id)
+            arrayOf<Any>(System.currentTimeMillis(), System.currentTimeMillis(), id)
         )
     }
 
@@ -88,7 +88,7 @@ class GameDatabase(context: Context) : SQLiteOpenHelper(context, "retro-player.d
         if (seconds <= 0L) return
         writableDatabase.execSQL(
             "UPDATE games SET playtime_seconds=playtime_seconds+?, updated_at=? WHERE id=?",
-            arrayOf(seconds, System.currentTimeMillis(), id)
+            arrayOf<Any>(seconds, System.currentTimeMillis(), id)
         )
     }
 

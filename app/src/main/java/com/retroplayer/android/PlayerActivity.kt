@@ -70,7 +70,7 @@ class PlayerActivity : ComponentActivity() {
             mediaPlaybackRequiresUserGesture = false
             cacheMode = android.webkit.WebSettings.LOAD_DEFAULT
             safeBrowsingEnabled = true
-            supportZoom = false
+            setSupportZoom(false)
         }
         web.webChromeClient = WebChromeClient()
         web.webViewClient = object : WebViewClient() {
